@@ -18,10 +18,40 @@
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
+
+##############
+#  Compiler  #
+##############
+ifneq ($(BOLOS_ENV),)
+$(info BOLOS_ENV=$(BOLOS_ENV))
+CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
+GCCPATH := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
+else
+$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
+endif
+ifeq ($(CLANGPATH),)
+$(info CLANGPATH is not set: clang will be used from PATH)
+endif
+ifeq ($(GCCPATH),)
+$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
+endif
+
+CC       := $(CLANGPATH)clang
+
+CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
+
+AS     := $(GCCPATH)arm-none-eabi-gcc
+
+LD       := $(GCCPATH)arm-none-eabi-gcc
+LDFLAGS  += -O3 -Os
+LDLIBS   += -lm -lgcc -lc
+
 include $(BOLOS_SDK)/Makefile.defines
 
 APPNAME = Tron
 APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
+# Samsung temporary implementation for wallet ID on 0xda7aba5e/0xc1a551c5
+APP_LOAD_PARAMS += --path "1517992542'/1101353413'"
 
 splitVersion=$(word $2, $(subst ., , $1))
 
@@ -33,12 +63,12 @@ APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
 #prepare hsm generation
 ifeq ($(TARGET_NAME),TARGET_BLUE)
-ICONNAME=icons/icon_blue.gif
+ICONNAME=icons/icon_blue.gif            # Name compatible w/ Blue SDK v2.1.1
 else
 ifeq ($(TARGET_NAME), TARGET_NANOX)
-ICONNAME=icons/icon_nanox.gif
+ICONNAME=icons/nanox_app_tron.gif
 else
-ICONNAME=icons/icon_r.gif
+ICONNAME=icons/nanos_app_tron.gif
 endif
 endif
 
@@ -94,34 +124,6 @@ else
         DEFINES   += PRINTF\(...\)=
 endif
 
-##############
-#  Compiler  #
-##############
-ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
-CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
-GCCPATH := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
-else
-$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
-endif
-ifeq ($(CLANGPATH),)
-$(info CLANGPATH is not set: clang will be used from PATH)
-endif
-ifeq ($(GCCPATH),)
-$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
-endif
-
-CC       := $(CLANGPATH)clang
-
-#CFLAGS   += -O0
-CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
-
-AS     := $(GCCPATH)arm-none-eabi-gcc
-
-LD       := $(GCCPATH)arm-none-eabi-gcc
-LDFLAGS  += -O3 -Os
-LDLIBS   += -lm -lgcc -lc
-
 # import rules to compile glyphs(/pone)
 include $(BOLOS_SDK)/Makefile.glyphs
 
@@ -140,6 +142,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOS)
 	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux/src/ux_flow_engine.c)" ""
 		SDK_SOURCE_PATH  += lib_ux
 		DEFINES		       += HAVE_UX_FLOW
+		DEFINES += HAVE_WALLET_ID_SDK
 	endif
 
 endif
