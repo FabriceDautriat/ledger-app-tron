@@ -12,12 +12,24 @@ protocol.TransferAssetContract.to_address           max_size: 21, fixed_length: 
 protocol.VoteWitnessContract.owner_address          max_size: 21, fixed_length: true
 protocol.VoteWitnessContract.votes                  max_count: 5  # Assume 5 votes max
 protocol.VoteWitnessContract.Vote.vote_address      max_size: 21, fixed_length: true
+protocol.VoteWitnessContract.support                type: FT_IGNORE
 
 protocol.FreezeBalanceContract.owner_address        max_size: 21, fixed_length: true
 protocol.FreezeBalanceContract.receiver_address     max_size: 21, fixed_length: true
 
 protocol.UnfreezeBalanceContract.owner_address      max_size: 21, fixed_length: true
 protocol.UnfreezeBalanceContract.receiver_address   max_size: 21, fixed_length: true
+
+protocol.FreezeBalanceV2Contract.owner_address      max_size: 21, fixed_length: true
+protocol.UnfreezeBalanceV2Contract.owner_address    max_size: 21, fixed_length: true
+
+protocol.WithdrawExpireUnfreezeContract.owner_address  max_size: 21, fixed_length: true
+
+protocol.DelegateResourceContract.owner_address     max_size: 21, fixed_length: true
+protocol.DelegateResourceContract.receiver_address  max_size: 21, fixed_length: true
+
+protocol.UnDelegateResourceContract.owner_address   max_size: 21, fixed_length: true
+protocol.UnDelegateResourceContract.receiver_address   max_size: 21, fixed_length: true
 
 protocol.WithdrawBalanceContract.owner_address      max_size: 21, fixed_length: true
 
@@ -30,7 +42,7 @@ protocol.ProposalDeleteContract.owner_address       max_size: 21, fixed_length: 
 
 protocol.TriggerSmartContract.owner_address         max_size: 21, fixed_length: true
 protocol.TriggerSmartContract.contract_address      max_size: 21, fixed_length: true
-protocol.TriggerSmartContract.data                  max_size: 72
+protocol.TriggerSmartContract.data                  type: FT_CALLBACK
 
 protocol.ExchangeCreateContract.owner_address       max_size: 21, fixed_length: true
 protocol.ExchangeCreateContract.first_token_id      max_size: 8
@@ -44,3 +56,6 @@ protocol.ExchangeWithdrawContract.token_id          max_size: 8
 
 protocol.ExchangeTransactionContract.owner_address  max_size: 21, fixed_length: true
 protocol.ExchangeTransactionContract.token_id       max_size: 8
+
+protocol.AccountPermissionUpdateContract.owner_address  max_size: 21, fixed_length: true
+protocol.AccountPermissionUpdateContract.actives        max_count: 2  # Assume 2 max actives

@@ -71,6 +71,11 @@ message Transaction {
       AccountPermissionUpdateContract = 46;
       ClearABIContract = 48;
       UpdateBrokerageContract = 49;
+      FreezeBalanceV2Contract = 54;
+      UnfreezeBalanceV2Contract = 55;
+      WithdrawExpireUnfreezeContract = 56;
+      DelegateResourceContract = 57;
+      UnDelegateResourceContract = 58;
     }
     ContractType type = 1;
     google.protobuf.Any parameter = 2;
@@ -121,7 +126,7 @@ message Transaction {
     int64 expiration = 8;
     repeated authority auths = 9;
     // data not used
-    bytes data = 10;
+    bytes custom_data = 10;
     //only support size = 1,  repeated list here for extension
     repeated Contract contract = 11;
     // scripts not used
@@ -134,4 +139,24 @@ message Transaction {
   // only support size = 1,  repeated list here for muti-sig extension
   repeated bytes signature = 2;
   repeated Result ret = 5;
+}
+
+message Key {
+  bytes address = 1;
+  int64 weight = 2;
+}
+
+message Permission {
+  enum PermissionType {
+    Owner = 0;
+    Witness = 1;
+    Active = 2;
+  }
+  PermissionType type = 1;
+  int32 id = 2;     //Owner id=0, Witness id=1, Active id start by 2
+  string permission_name = 3;
+  int64 threshold = 4;
+  int32 parent_id = 5;
+  bytes operations = 6;   //1 bit 1 contract
+  repeated Key keys = 7;
 }

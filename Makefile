@@ -18,10 +18,10 @@
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
-include $(BOLOS_SDK)/Makefile.defines
+
+include $(BOLOS_SDK)/Makefile.target
 
 APPNAME = Tron
-APP_LOAD_PARAMS=--appFlags 0x240 --path "44'/195'" --curve secp256k1 $(COMMON_LOAD_PARAMS) 
 
 splitVersion=$(word $2, $(subst ., , $1))
 
@@ -31,135 +31,65 @@ APPVERSION_M=$(call splitVersion, $(APPVERSION), 1)
 APPVERSION_N=$(call splitVersion, $(APPVERSION), 2)
 APPVERSION_P=$(call splitVersion, $(APPVERSION), 3)
 
-#prepare hsm generation
-ifeq ($(TARGET_NAME),TARGET_BLUE)
-ICONNAME=icons/icon_blue.gif
-else
-ifeq ($(TARGET_NAME), TARGET_NANOX)
-ICONNAME=icons/icon_nanox.gif
-else
-ICONNAME=icons/icon_r.gif
-endif
-endif
+# - <VARIANT_PARAM> is the name of the parameter which should be set
+#   to specify the variant that should be build.
+# - <VARIANT_VALUES> a list of variant that can be build using this app code.
+#   * It must at least contains one value.
+#   * Values can be the app ticker or anything else but should be unique.
+VARIANT_PARAM = COIN
+VARIANT_VALUES = tron
 
+CURVE_APP_LOAD_PARAMS = secp256k1
+PATH_APP_LOAD_PARAMS = "44'/195'"  # purpose=coin(44) / coin_type=Tron(1)
 
-################
-# Default rule #
-################
-all: default
+ICON_NANOX = icons/nanox_app_tron.gif
+ICON_NANOSP = icons/nanox_app_tron.gif
+ICON_STAX = icons/stax_app_tron.gif
+ICON_FLEX = icons/flex_app_tron.gif
+ICON_APEX_P = icons/apex_app_tron.png
 
-############
-# Platform #
-############
+ENABLE_BLUETOOTH = 1
+ENABLE_SWAP = 1
+ENABLE_NBGL_QRCODE = 1
 
-DEFINES   += OS_IO_SEPROXYHAL
-DEFINES   += HAVE_BAGL HAVE_SPRINTF
-DEFINES   += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=6 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
-DEFINES   +=  LEDGER_MAJOR_VERSION=$(APPVERSION_M) LEDGER_MINOR_VERSION=$(APPVERSION_N) LEDGER_PATCH_VERSION=$(APPVERSION_P)
+# AccountPermissionUpdateContract must never fall back to hash-only review (see
+# ui_review_menu_nbgl.c). Migrating Nano X/S+ to NBGL gives them the same full
+# permission-detail rendering as Stax/Flex/Apex, instead of the stale BAGL
+# hash-only screen the app used to fall back to on those devices.
+ENABLE_NBGL_FOR_NANO_DEVICES = 1
 
-DEFINES   += USB_SEGMENT_SIZE=64
-DEFINES   += BLE_SEGMENT_SIZE=32 #max MTU, min 20
-DEFINES   += UNUSED\(x\)=\(void\)x
-DEFINES   += APPVERSION=\"$(APPVERSION)\"
+#######################################################################
+#                           STACK PROTECTOR                           #
+#######################################################################
+ENABLE_STACK_PROTECTOR = 1
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=300
-# BLE
-DEFINES   += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000
-DEFINES   += HAVE_BLE_APDU # basic ledger apdu transport over BLE
+#######################################################################
+#                                 LTO                                 #
+#######################################################################
+ENABLE_LINK_TIME_OPTIMIZATION = 1
 
-DEFINES   += HAVE_GLO096 HAVE_UX_FLOW
-DEFINES   += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
-DEFINES   += HAVE_BAGL_ELLIPSIS # long label truncation feature
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
-DEFINES   += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-else
-DEFINES   += IO_SEPROXYHAL_BUFFER_SIZE_B=128
-endif
+# Enabling DEBUG flag will enable PRINTF and disable optimizations
+DEBUG ?= 0
+
+APP_SOURCE_PATH  += src
+
+.PHONY: proto
+proto:
+	$(MAKE) -C proto
+
+cleanall : clean
+	$(MAKE) -C proto clean
 
 # nanopb
+#include nanopb/extra/nanopb.mk
+NANOPB_DIR = nanopb
+
+CFLAGS += "-I$(NANOPB_DIR)" -Iproto
 DEFINES   += PB_NO_ERRMSG=1
+SOURCE_FILES += $(NANOPB_DIR)/pb_encode.c $(NANOPB_DIR)/pb_decode.c $(NANOPB_DIR)/pb_common.c
+APP_SOURCE_PATH += proto
 
-# Enabling debug PRINTF
-DEBUG = 0
-ifneq ($(DEBUG),0)
+# Exclude third-party nanopb from static analysis
+SCAN_BUILD = scan-build --exclude $(NANOPB_DIR)
 
-        ifeq ($(TARGET_NAME),TARGET_NANOX)
-                DEFINES   += HAVE_PRINTF PRINTF=mcu_usb_printf
-        else
-                DEFINES   += HAVE_PRINTF PRINTF=screen_printf
-        endif
-else
-        DEFINES   += PRINTF\(...\)=
-endif
-
-##############
-#  Compiler  #
-##############
-ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
-CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
-GCCPATH := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
-else
-$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
-endif
-ifeq ($(CLANGPATH),)
-$(info CLANGPATH is not set: clang will be used from PATH)
-endif
-ifeq ($(GCCPATH),)
-$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
-endif
-
-CC       := $(CLANGPATH)clang
-
-#CFLAGS   += -O0
-CFLAGS   += -O3 -Os -Isrc/include -Iextra/nanopb -Iproto
-
-AS     := $(GCCPATH)arm-none-eabi-gcc
-
-LD       := $(GCCPATH)arm-none-eabi-gcc
-LDFLAGS  += -O3 -Os
-LDLIBS   += -lm -lgcc -lc
-
-# import rules to compile glyphs(/pone)
-include $(BOLOS_SDK)/Makefile.glyphs
-
-### computed variables
-APP_SOURCE_PATH  += src proto extra/nanopb
-SDK_SOURCE_PATH  += lib_u2f lib_stusb_impl lib_stusb
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
-SDK_SOURCE_PATH  += lib_ux
-endif
-
-# If the SDK supports Flow for Nano S, build for it
-
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-
-	ifneq "$(wildcard $(BOLOS_SDK)/lib_ux/src/ux_flow_engine.c)" ""
-		SDK_SOURCE_PATH  += lib_ux
-		DEFINES		       += HAVE_UX_FLOW
-	endif
-
-endif
-
-# U2F
-DEFINES   += U2F_PROXY_MAGIC=\"TRX\"
-DEFINES   += HAVE_IO_U2F HAVE_U2F
-DEFINES   += U2F_REQUEST_TIMEOUT=28000 # 28 seconds
-
-load: all
-	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
-
-delete:
-	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
-
-# import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile.genericwallet
-
-listvariants:
-	@echo VARIANTS COIN tron
+include $(BOLOS_SDK)/Makefile.standard_app

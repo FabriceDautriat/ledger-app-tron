@@ -1,0 +1,16 @@
+BasedOnStyle: Google
+IndentWidth: 4
+Language: Cpp
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: true
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+BinPackArguments: false
+BinPackParameters: false
+ColumnLimit: 100
+PointerAlignment: Right
+SortIncludes: false
+SpaceAfterCStyleCast: true
